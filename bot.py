@@ -17,7 +17,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"سلام {user.first_name}!\n\n"
+        f"سلام {user.first_name}!
+
+"
         "جهت ورود به گروه مهندسی کامپیوتر مراحل احراز را انجام دهید:",
         reply_markup=reply_markup
     )
@@ -73,6 +75,10 @@ async def verify_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("لطفاً فقط 'تایید' یا 'رد' ارسال کنید.")
         return VERIFY
 
+# نمایش پیام در صورت ارسال پیام غیر مرتبط
+async def pending_request_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("درخواست شما در حال بررسی می‌باشد.")
+
 # لغو فرآیند
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("فرآیند لغو شد.")
@@ -92,6 +98,9 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)]
     )
+
+    # هندلر برای پیام‌های غیر مرتبط
+    application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, pending_request_message))
 
     application.add_handler(conv_handler)
     application.run_polling()
