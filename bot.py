@@ -2,14 +2,14 @@ import os
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
-
+# متغیرهای محیطی
 BOT_TOKEN = os.getenv('BOT_TOKEN')  # توکن ربات از متغیر محیطی
 ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID')  # آی‌دی مدیر از متغیر محیطی
 
-
+# مراحل احراز هویت
 PHONE, PHOTO, PENDING = range(3)
 
-
+# شروع ربات
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     keyboard = [[KeyboardButton("ارسال شماره تلفن", request_contact=True)]]
@@ -20,7 +20,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return PHONE
 
-
+# دریافت شماره تلفن
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.contact:
         phone_number = update.message.contact.phone_number
@@ -36,7 +36,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return PHONE
 
-
+# دریافت عکس
 async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.photo:
         photo_file = update.message.photo[-1].file_id
@@ -46,52 +46,59 @@ async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "عکس شما دریافت شد. درخواست شما به مدیر ارسال شد."
         )
 
-
-        await context.bot.send_photo(
-            chat_id=ADMIN_CHAT_ID,
-            photo=photo_file,
-            caption=f"کاربر {update.effective_user.first_name} با شماره {context.user_data['phone_number']} درخواست عضویت داده است."
-        )
+        try:
+            # ارسال اطلاعات به مدیر
+            await context.bot.send_photo(
+                chat_id=int(ADMIN_CHAT_ID),
+                photo=photo_file,
+                caption=f"کاربر {update.effective_user.first_name} با شماره {context.user_data['phone_number']} درخواست عضویت داده است."
+            )
+        except Exception as e:
+            await update.message.reply_text("ارسال پیام به مدیر با مشکل مواجه شد. لطفاً بعداً دوباره تلاش کنید.")
+            print(f"Error sending message to admin: {e}")
 
         return PENDING
     else:
         await update.message.reply_text("لطفاً یک عکس معتبر ارسال کنید.")
         return PHOTO
 
-
+# حالت در انتظار
 async def pending_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "اطلاعات شما در حال بررسی می‌باشد، لطفا شکیبا باشید."
     )
 
-
+# ارسال تایید یا رد به کاربر
 async def handle_admin_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text.lower()
     user_chat_id = context.user_data.get('user_chat_id')
 
-    if user_input == "تایید":
-        await context.bot.send_message(
-            chat_id=user_chat_id,
-            text="درخواست شما تأیید شد. لینک گروه: https://t.me/YOUR_GROUP_LINK"
-        )
-    elif user_input == "رد":
-        await context.bot.send_message(
-            chat_id=user_chat_id,
-            text="کاربر عزیز اطلاعات شما به درستی و صحت نبود، لطفاً مجدداً با زدن دکمه استارت اطلاعات صحیح خودتون رو ارسال کنید."
-        )
+    if user_chat_id:
+        if user_input == "تایید":
+            await context.bot.send_message(
+                chat_id=user_chat_id,
+                text="درخواست شما تأیید شد. لینک گروه: https://t.me/YOUR_GROUP_LINK"
+            )
+        elif user_input == "رد":
+            await context.bot.send_message(
+                chat_id=user_chat_id,
+                text="کاربر عزیز اطلاعات شما به درستی و صحت نبود، لطفاً مجدداً با زدن دکمه استارت اطلاعات صحیح خودتون رو ارسال کنید."
+            )
+        else:
+            await update.message.reply_text("لطفاً فقط 'تایید' یا 'رد' ارسال کنید.")
     else:
-        await update.message.reply_text("لطفاً فقط 'تایید' یا 'رد' ارسال کنید.")
+        await update.message.reply_text("هیچ کاربری برای بررسی وجود ندارد.")
 
-
+# لغو فرآیند
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("فرآیند لغو شد.")
     return ConversationHandler.END
 
-
+# تنظیمات اصلی ربات
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
-
+    # تعریف مکالمه چند مرحله‌ای
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
