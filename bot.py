@@ -2,20 +2,14 @@ import os
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
-# متغیرهای محیطی
+
 BOT_TOKEN = os.getenv('BOT_TOKEN')  # توکن ربات از متغیر محیطی
 ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID')  # آی‌دی مدیر از متغیر محیطی
 
-# مراحل احراز هویت
+
 PHONE, PHOTO, PENDING = range(3)
 
-# حذف وب‌هوک
-async def remove_webhook():
-    from telegram import Bot
-    bot = Bot(BOT_TOKEN)
-    await bot.delete_webhook()
 
-# شروع ربات
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     keyboard = [[KeyboardButton("ارسال شماره تلفن", request_contact=True)]]
@@ -26,7 +20,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return PHONE
 
-# دریافت شماره تلفن
+
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.contact:
         phone_number = update.message.contact.phone_number
@@ -42,7 +36,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return PHONE
 
-# دریافت عکس
+
 async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.photo:
         photo_file = update.message.photo[-1].file_id
@@ -52,7 +46,7 @@ async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "عکس شما دریافت شد. درخواست شما به مدیر ارسال شد."
         )
 
-        # ارسال اطلاعات به مدیر
+
         await context.bot.send_photo(
             chat_id=ADMIN_CHAT_ID,
             photo=photo_file,
@@ -64,13 +58,13 @@ async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("لطفاً یک عکس معتبر ارسال کنید.")
         return PHOTO
 
-# حالت در انتظار
+
 async def pending_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "اطلاعات شما در حال بررسی می‌باشد، لطفا شکیبا باشید."
     )
 
-# ارسال تایید یا رد به کاربر
+
 async def handle_admin_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text.lower()
     user_chat_id = context.user_data.get('user_chat_id')
@@ -88,16 +82,16 @@ async def handle_admin_response(update: Update, context: ContextTypes.DEFAULT_TY
     else:
         await update.message.reply_text("لطفاً فقط 'تایید' یا 'رد' ارسال کنید.")
 
-# لغو فرآیند
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("فرآیند لغو شد.")
     return ConversationHandler.END
 
-# تنظیمات اصلی ربات
-async def main():
+
+def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # تعریف مکالمه چند مرحله‌ای
+
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -110,13 +104,7 @@ async def main():
 
     application.add_handler(conv_handler)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_response))
-
-    # حذف وب‌هوک قبل از اجرای polling
-    await remove_webhook()
-
-    # اجرای polling
     application.run_polling()
 
 if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+    main()
