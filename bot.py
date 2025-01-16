@@ -115,7 +115,8 @@ async def main():
     await remove_webhook()
 
     # اجرای polling
-    application.run_polling()
+    await application.start_polling()
+    await application.idle()
 
 if __name__ == '__main__':
     import asyncio
