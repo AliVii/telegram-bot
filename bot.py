@@ -94,7 +94,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 # تنظیمات اصلی ربات
-def main():
+async def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
     # تعریف مکالمه چند مرحله‌ای
@@ -111,10 +111,12 @@ def main():
     application.add_handler(conv_handler)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_response))
 
-    import asyncio
-    asyncio.run(remove_webhook())
+    # حذف وب‌هوک قبل از اجرای polling
+    await remove_webhook()
 
+    # اجرای polling
     application.run_polling()
 
 if __name__ == '__main__':
-    main()
+    import asyncio
+    asyncio.run(main())
